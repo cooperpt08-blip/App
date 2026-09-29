@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Body, Button, Card, Eyebrow, Field, Loading, Notice, Screen, Title } from '@/components/ui';
+import { OwnerInvites } from '@/components/OwnerInvites';
 import { useAccount } from '@/lib/account';
 import { friendlyError, supabase } from '@/lib/supabase';
 
@@ -63,6 +64,7 @@ export default function Setup() {
     <Screen>
       <Eyebrow>Hi {profile.first_name}</Eyebrow>
       <Title>How will you use Shape Up?</Title>
+      <OwnerInvites />
 
       {invites.map((invite) => (
         <Card key={invite.invite_id}>

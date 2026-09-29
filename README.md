@@ -54,6 +54,7 @@ Each step is built, then you test it before we move on.
    - `20260930000000_clients.sql`: Clients tab, profile photos, sharing a cut card with a new shop
    - `20261001000000_scheduling.sql`: barber hours, days off, and appointment booking
    - `20261002000000_launch_ready.sql`: birthdays, notifications, reminders, monthly reports, admin view
+   - `20261003000000_ownership.sql`: shop owners hand their shop to a barber or a new owner by email
 3. **Leave email sign-in as it is.** People sign in with an email and password. New accounts get Supabase's
    standard "Confirm your signup" email, so there's nothing to change. Keep **Confirm email** turned on
    (Authentication → Sign In / Providers → Email). It's on by default, and it stops someone from signing up

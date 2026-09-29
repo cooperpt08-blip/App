@@ -26,6 +26,7 @@ type Overview = {
     address: string;
     created_at: string;
     owner_email: string | null;
+    pending_owner_email?: string | null;
     team: number;
     clients: number;
     recommendations_month: number;
@@ -100,7 +101,7 @@ export default function Admin() {
                 <Text style={{ fontSize: 19, fontWeight: '700', color: colors.text }}>{s.name}</Text>
                 {s.address ? <Body muted>{s.address}</Body> : null}
                 <Body muted>
-                  {s.owner_email ?? 'No owner email'} · joined {new Date(s.created_at).toLocaleDateString()}
+                  {s.owner_email ?? (s.pending_owner_email ? `No owner yet: waiting for ${s.pending_owner_email}` : 'No owner')} · joined {new Date(s.created_at).toLocaleDateString()}
                 </Body>
               </View>
               <View style={styles.statRow}>

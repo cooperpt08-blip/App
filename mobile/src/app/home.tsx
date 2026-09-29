@@ -4,6 +4,7 @@ import { Alert, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Body, Button, Card, Eyebrow, Field, Label, Notice, Screen, Title } from '@/components/ui';
+import { OwnerInvites } from '@/components/OwnerInvites';
 import { useAccount } from '@/lib/account';
 import { formatDay, formatTime } from '@/lib/schedule';
 import { pickSquarePhoto, profilePhotoUrls, removeProfilePhoto, uploadProfilePhoto } from '@/lib/photos';
@@ -175,6 +176,7 @@ export default function CustomerHome() {
     <Screen>
       <Eyebrow>Shape Up</Eyebrow>
       <Title>Hi {profile.first_name}</Title>
+      <OwnerInvites />
 
       {invites.length > 0 && (
         <Notice tone="note">

@@ -155,7 +155,7 @@ export const TERMS_OF_SERVICE: LegalSection[] = [
   {
     heading: 'Deleting your account',
     paragraphs: [
-      'You can delete your account at any time in Settings. If you own a shop, deleting your account also deletes the shop, its team links, its clients’ cut cards, and its bookings.',
+      'You can delete your account at any time in Settings. If you own a shop, you first choose who takes it over (one of your barbers, or someone by email), and the shop keeps running. The shop and its data are deleted only if you tell us it is closing.',
     ],
   },
   {

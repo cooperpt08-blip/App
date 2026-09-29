@@ -5,6 +5,7 @@ import { Alert, Share, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { Body, Button, Card, colors, Eyebrow, Field, Label, Notice, Screen, Title } from '@/components/ui';
+import { OwnerInvites } from '@/components/OwnerInvites';
 import { Chips } from '@/components/Segmented';
 import { useAccount } from '@/lib/account';
 import { APPOINTMENT_LENGTHS, deviceTimeZone } from '@/lib/schedule';
@@ -151,6 +152,7 @@ export default function ShopScreen() {
     <Screen>
       <Eyebrow>{isOwner ? 'Owner' : 'Barber'}</Eyebrow>
       <Title>{shop.name}</Title>
+      <OwnerInvites />
       {message && <Notice tone={message.tone}>{message.text}</Notice>}
 
       <Card style={{ alignItems: 'center' }}>

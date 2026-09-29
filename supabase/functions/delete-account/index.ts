@@ -1,10 +1,14 @@
 // Shape Up: permanently delete the signed-in person's account and data.
 // Called from the app (Settings -> Delete account). Apple requires this.
 //
-// Deletes: their photos (profile and cut card photos), and, if they own a shop,
-// the shop with its team links, cut cards, bookings and photos. Then deletes the
-// account itself, which removes their profile, recommendations, cut cards,
-// appointments, notes about them and phone tokens (the database cascades these).
+// Deletes their photos (profile and cut card photos), then the account itself, which
+// removes their profile, recommendations, cut cards, appointments, team membership and
+// phone tokens (the database cascades these).
+//
+// Shop owners must first choose what happens to their shop (the app asks):
+//   * hand it to a barber (they're then no longer the owner), or
+//   * invite a new owner by email (the shop keeps running until they accept), or
+//   * close it: the app sends { "closeShop": true } and only then is the shop deleted.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
 const cors = {
@@ -53,10 +57,22 @@ Deno.serve(async (req) => {
 
   const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
+  const body = await req.json().catch(() => ({}));
+  const closeShop = body?.closeShop === true;
+
   try {
-    // 1. Shops they own: remove every photo in the shop, then the shop itself.
+    // 1. Shops they own.
     const { data: owned } = await admin.from('shops').select('id').eq('owner_id', userId);
     for (const shop of owned ?? []) {
+      const { data: pending } = await admin.from('shop_owner_invites').select('email').eq('shop_id', shop.id).maybeSingle();
+      if (pending) continue; // a new owner is invited: the shop stays and waits for them
+      if (!closeShop) {
+        return reply(409, {
+          error: 'Choose who takes over your shop first, or confirm that your shop is closing.',
+          needsShopDecision: true,
+        });
+      }
+      // The shop is closing: remove every photo in it, then the shop and all its data.
       await removeAll(admin, 'cut-card-photos', await listAll(admin, 'cut-card-photos', shop.id));
       const { error } = await admin.from('shops').delete().eq('id', shop.id);
       if (error) throw error;
