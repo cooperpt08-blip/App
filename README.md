@@ -56,6 +56,7 @@ Each step is built, then you test it before we move on.
    - `20261002000000_launch_ready.sql`: birthdays, notifications, reminders, monthly reports, admin view
    - `20261003000000_ownership.sql`: shop owners hand their shop to a barber or a new owner by email
    - `20261004000000_shop_map.sql`: map of barbershops (phone number, map position, join from the map)
+   - `20261005000000_recommendations.sql`: recommendation limits and the trend research cache
 3. **Leave email sign-in as it is.** People sign in with an email and password. New accounts get Supabase's
    standard "Confirm your signup" email, so there's nothing to change. Keep **Confirm email** turned on
    (Authentication → Sign In / Providers → Email). It's on by default, and it stops someone from signing up
@@ -109,6 +110,11 @@ sample code, paste the whole file from GitHub, then click **Deploy**.
 | `delete-account` | `supabase/functions/delete-account/index.ts` | Leave "Enforce JWT verification" **on** |
 | `notify` | `supabase/functions/notify/index.ts` | Open the function → Details → turn "Enforce JWT verification" **off** (it checks your secret instead) |
 | `send-reminders` | `supabase/functions/send-reminders/index.ts` | Same: turn "Enforce JWT verification" **off** |
+| `recommend` | `supabase/functions/recommend/index.ts` | Leave "Enforce JWT verification" **on** |
+
+**Turning on real AI recommendations (when you're ready to pay for them):** in Claude Console
+(platform.claude.com) create an API key, then in Supabase add a secret named `ANTHROPIC_API_KEY` with that key.
+Until then, `recommend` returns clearly labeled demo results. Admins (you) have no monthly limit, for testing.
 
 ### 3. Ping barbers about bookings and cut cards (Database Webhooks)
 **Database → Webhooks** (or Integrations → Database Webhooks; enable it if asked) → **Create a new hook**. Make two:

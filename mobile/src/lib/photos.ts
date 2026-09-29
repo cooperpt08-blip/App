@@ -11,8 +11,10 @@ export function avatarPath(userId: string) {
 
 // Lets the person take or choose a photo, cropped square, then shrinks it so it
 // uploads fast. Returns null if they cancel.
-export async function pickSquarePhoto(source: 'camera' | 'library'): Promise<string | null> {
-  const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 1 };
+export async function pickSquarePhoto(source: 'camera' | 'library', square = true): Promise<string | null> {
+  const options: ImagePicker.ImagePickerOptions = square
+    ? { mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 1 }
+    : { mediaTypes: ['images'], quality: 1 };
   if (source === 'camera') {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) throw new Error('Shape Up needs camera access. You can turn it on in Settings.');
@@ -32,6 +34,15 @@ async function toJpegBytes(uri: string, maxSide: number): Promise<ArrayBuffer> {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes.buffer;
+}
+
+// A recommendation photo: shrunk to 1024px wide JPEG, with the base64 text the
+// server needs. Kept only in memory.
+export async function prepareRecommendationPhoto(uri: string): Promise<{ uri: string; base64: string }> {
+  const rendered = await ImageManipulator.manipulate(uri).resize({ width: 1024 }).renderAsync();
+  const saved = await rendered.saveAsync({ compress: 0.8, format: SaveFormat.JPEG, base64: true });
+  if (!saved.base64) throw new Error('Could not read that photo. Try another one.');
+  return { uri: saved.uri, base64: saved.base64 };
 }
 
 export async function uploadProfilePhoto(userId: string, uri: string) {

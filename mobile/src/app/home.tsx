@@ -1,4 +1,4 @@
-import { router, useFocusEffect, type Href } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
@@ -9,6 +9,37 @@ import { useAccount } from '@/lib/account';
 import { formatDay, formatTime } from '@/lib/schedule';
 import { pickSquarePhoto, profilePhotoUrls, removeProfilePhoto, uploadProfilePhoto } from '@/lib/photos';
 import { friendlyError, supabase } from '@/lib/supabase';
+
+// The customer's latest recommendations, to reopen any time.
+function PastRecommendations() {
+  const [items, setItems] = useState<{ id: string; created_at: string; is_demo: boolean; result: { cuts?: { name: string }[] } }[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      supabase
+        .from('recommendations')
+        .select('id, created_at, is_demo, result')
+        .order('created_at', { ascending: false })
+        .limit(5)
+        .then(({ data }) => setItems((data as typeof items | null) ?? []));
+    }, []),
+  );
+
+  if (items.length === 0) return null;
+  return (
+    <Card>
+      <Label>Your recommendations</Label>
+      {items.map((r) => (
+        <Button
+          key={r.id}
+          variant="secondary"
+          title={`${new Date(r.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}: ${r.result?.cuts?.[0]?.name ?? 'Recommendation'}${r.is_demo ? ' (demo)' : ''}`}
+          onPress={() => router.push(`/results/${r.id}`)}
+        />
+      ))}
+    </Card>
+  );
+}
 
 type MyAppointment = {
   appointment_id: string;
@@ -185,6 +216,9 @@ export default function CustomerHome() {
       )}
       {invites.length > 0 && <Button title="Accept barber invite" variant="secondary" onPress={() => router.push('/setup')} />}
 
+      <Button title="✨ Get my haircut recommendations" onPress={() => router.push('/recommend')} />
+      <PastRecommendations />
+
       <Card>
         <Label>Your barbershop</Label>
         {shop ? (
@@ -227,8 +261,6 @@ export default function CustomerHome() {
         <Button title="Show my cut card code" variant="secondary" onPress={() => router.push('/share-card')} />
       </Card>
 
-      <Button title="Get my haircut recommendations" onPress={() => router.push('/start' as Href)} disabled />
-      <Body muted center>Recommendations arrive in the next build step.</Body>
 
       <Button title="Settings" variant="secondary" onPress={() => router.push('/settings')} />
       <Button title="Sign out" variant="secondary" onPress={signOut} />
