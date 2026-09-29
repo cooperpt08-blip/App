@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { Chips } from '@/components/Segmented';
 import { Body, Button, Card, Eyebrow, Field, Label, Notice, Screen, Title } from '@/components/ui';
 import { useAccount } from '@/lib/account';
+import { hasPendingJoin } from '@/lib/pendingJoin';
 import { friendlyError, supabase } from '@/lib/supabase';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -43,7 +44,11 @@ export default function Birthday() {
     setBusy(false);
     if (error) return setError(friendlyError(error));
     await refresh();
-    router.replace('/home');
+    // Scanned a shop's QR code before signing up: the front door links them to it.
+    // Already linked: go home. Otherwise: help them pick a barbershop on the map.
+    if (await hasPendingJoin()) router.replace('/');
+    else if (profile.shop_id) router.replace('/home');
+    else router.replace('/shops?welcome=1');
   }
 
   return (

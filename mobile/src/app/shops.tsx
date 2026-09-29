@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, type Region } from 'react-native-maps';
@@ -46,6 +46,9 @@ function regionFor(points: Point[]): Region {
 // Every Shape Up barbershop on a map, with a quick way to join one.
 export default function ShopMap() {
   const { profile, membership, refresh } = useAccount();
+  // welcome=1: a new customer who signed up without a shop, choosing one for the first time.
+  const welcome = useLocalSearchParams<{ welcome?: string }>().welcome === '1';
+  const [joinedName, setJoinedName] = useState<string | null>(null);
   const map = useRef<MapView>(null);
   const [shops, setShops] = useState<DirectoryShop[]>([]);
   const [me, setMe] = useState<Point | null>(null);
@@ -116,6 +119,7 @@ export default function ShopMap() {
       if (error) return setMessage({ tone: 'error', text: friendlyError(error) });
       await refresh();
       await load();
+      setJoinedName(shop.name);
       setMessage({ tone: 'success', text: `You’re now linked to ${shop.name}. You get up to 5 recommendations a month and can book with them.` });
     };
     if (profile?.shop_id) {
@@ -131,11 +135,32 @@ export default function ShopMap() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
-        <View style={{ width: 96 }}>
-          <Button title="‹ Back" variant="secondary" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
-        </View>
-        <Text style={styles.title}>Find a barbershop</Text>
+        {welcome ? (
+          <>
+            <Text style={[styles.title, { flex: 1 }]}>Choose your barbershop</Text>
+            <View style={{ width: 132 }}>
+              <Button
+                title={joinedName ? 'Continue' : 'Skip for now'}
+                variant={joinedName ? 'primary' : 'secondary'}
+                onPress={() => router.replace('/home')}
+              />
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={{ width: 96 }}>
+              <Button title="‹ Back" variant="secondary" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+            </View>
+            <Text style={styles.title}>Find a barbershop</Text>
+          </>
+        )}
       </View>
+      {welcome && !joinedName && (
+        <Text style={styles.welcome}>
+          Pick the shop you go to so you can book and get up to 5 free recommendations a month. At the shop? You can
+          also scan their QR code with your camera.
+        </Text>
+      )}
 
       <MapView
         ref={map}
@@ -177,7 +202,12 @@ export default function ShopMap() {
               {isCustomer && !current.is_my_shop && (
                 <Button title={`Join ${current.name}`} onPress={() => join(current)} loading={joining} />
               )}
-              {isCustomer && current.is_my_shop && <Button title="Book an appointment" onPress={() => router.push('/book')} />}
+              {isCustomer && current.is_my_shop && welcome && (
+                <Button title="Continue" onPress={() => router.replace('/home')} />
+              )}
+              {isCustomer && current.is_my_shop && !welcome && (
+                <Button title="Book an appointment" onPress={() => router.push('/book')} />
+              )}
               <Button title="Show all shops" variant="secondary" onPress={() => setSelected(null)} />
             </View>
           ) : (
@@ -218,6 +248,7 @@ export default function ShopMap() {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10 },
   title: { fontSize: 22, fontWeight: '700', color: colors.text, flexShrink: 1 },
+  welcome: { fontSize: 15, lineHeight: 21, color: colors.muted, paddingHorizontal: 16, paddingBottom: 10 },
   map: { height: '42%', width: '100%' },
   list: { padding: 16, paddingBottom: 40 },
   inner: { width: '100%', maxWidth: 640, alignSelf: 'center', gap: 12 },

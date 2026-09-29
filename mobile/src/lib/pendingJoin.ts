@@ -13,3 +13,8 @@ export async function takePendingJoin(): Promise<string | null> {
   if (code) await AsyncStorage.removeItem(KEY);
   return code;
 }
+
+// Checks for a remembered code without using it up.
+export async function hasPendingJoin(): Promise<boolean> {
+  return Boolean(await AsyncStorage.getItem(KEY));
+}
