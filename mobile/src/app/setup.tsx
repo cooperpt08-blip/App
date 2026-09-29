@@ -75,7 +75,7 @@ export default function Setup() {
       {error && <Notice tone="error">{error}</Notice>}
 
       <View style={{ gap: 12 }}>
-        <Button title="I’m getting a haircut" onPress={() => router.replace('/home')} />
+        <Button title="I’m getting a haircut" onPress={() => router.replace('/')} />
         <Button title="I own a barbershop" variant="secondary" onPress={() => router.push('/create-shop')} />
       </View>
       <Body muted>

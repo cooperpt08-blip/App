@@ -22,7 +22,8 @@ Each step is built, then you test it before we move on.
 | 1 | Database and security rules, sign-in, shop owners create a shop with a QR code, invite barbers, customers link to a shop | ✅ built, ready to test |
 | 1b | Clients tab for barbers (name, photo, usual cut), customer profile photos, and a QR code customers show at a new shop to share their cut cards | ✅ built, ready to test |
 | 1c | Scheduling: barbers set weekly hours and days off, customers book open times, Schedule tab for the shop | ✅ built, ready to test |
-| 2 | Customer flow in the app: photos, questions, recommendations (free demo mode until you add a Claude key), monthly limits | next |
+| 1d | Account deletion, privacy policy and terms (drafts), push notifications, day-before reminders, monthly shop report, admin view, customer birthday | ✅ built, needs the server setup below |
+| 2 | Customer flow in the app (planned: a "describe the cut you want" box before the photo, guided photo capture with MediaPipe, and trend research on the web before recommending): photos, questions, recommendations (free demo mode until you add a Claude key), monthly limits | next |
 | 3 | "Send to my barbershop": pick a cut, a barber, an appointment time, and give photo permission | |
 | 4 | Barbers' "Upcoming cuts" tab: live updates, new-card badge, statuses, notes, full-size photos | |
 | 5 | Automatic photo deletion, updated privacy wording, a slot for AI preview images (no paid service until you approve one) | |
@@ -52,6 +53,7 @@ Each step is built, then you test it before we move on.
    - `20260929000000_shape_up.sql`: shops, barbers, customers, cut cards
    - `20260930000000_clients.sql`: Clients tab, profile photos, sharing a cut card with a new shop
    - `20261001000000_scheduling.sql`: barber hours, days off, and appointment booking
+   - `20261002000000_launch_ready.sql`: birthdays, notifications, reminders, monthly reports, admin view
 3. **Leave email sign-in as it is.** People sign in with an email and password. New accounts get Supabase's
    standard "Confirm your signup" email, so there's nothing to change. Keep **Confirm email** turned on
    (Authentication → Sign In / Providers → Email). It's on by default, and it stops someone from signing up
@@ -85,3 +87,55 @@ connect a proper email service.
   (or 30 days after sending if there's no appointment).
 - `supabase/tests/` holds automatic checks that prove these rules work: 36 scenarios, such as "shop B tries to
   read shop A's cut cards". It's for testing only; never run it on your real project.
+
+## Server setup: account deletion, notifications, reminders (one time, about 20 minutes)
+
+These run on Supabase as small server programs called **Edge Functions**. The code is in `supabase/functions/`.
+
+### 1. Make a secret password for notifications
+Make up a long random password (for example from a password manager), such as `k3J9-long-random-text`.
+In Supabase: **Edge Functions → Secrets** (or Project Settings → Edge Functions) → **Add new secret**:
+- Name: `NOTIFY_SECRET`
+- Value: your password
+
+### 2. Add the three functions
+For each one: **Edge Functions → Deploy a new function → Via Editor**. Name it exactly as below, delete the
+sample code, paste the whole file from GitHub, then click **Deploy**.
+
+| Name | File | After deploying |
+|---|---|---|
+| `delete-account` | `supabase/functions/delete-account/index.ts` | Leave "Enforce JWT verification" **on** |
+| `notify` | `supabase/functions/notify/index.ts` | Open the function → Details → turn "Enforce JWT verification" **off** (it checks your secret instead) |
+| `send-reminders` | `supabase/functions/send-reminders/index.ts` | Same: turn "Enforce JWT verification" **off** |
+
+### 3. Ping barbers about bookings and cut cards (Database Webhooks)
+**Database → Webhooks** (or Integrations → Database Webhooks; enable it if asked) → **Create a new hook**. Make two:
+
+| Name | Table | Events | Type | Function | HTTP header |
+|---|---|---|---|---|---|
+| `notify-appointments` | `appointments` | Insert, Update | Supabase Edge Functions | `notify` | `x-shapeup-secret` = your password |
+| `notify-cut-cards` | `cut_cards` | Insert | Supabase Edge Functions | `notify` | `x-shapeup-secret` = your password |
+
+### 4. Send reminders every hour (Cron)
+**Integrations → Cron** (enable it if asked) → **Create job**:
+- Name: `send-reminders`
+- Schedule: `5 * * * *` (5 minutes past every hour)
+- Type: **Supabase Edge Function**, function `send-reminders`, method POST
+- HTTP header: `x-shapeup-secret` = your password
+
+### 5. Connect the app to Expo's notification service
+In Terminal, in the `App/mobile` folder, run `npx eas-cli@latest init` and follow the prompts (use your Expo
+account). It prints a **project ID**. Send it to Claude so it can be added to the app for everyone, or keep the
+change it makes to `app.json`.
+
+### 6. Make yourself an admin
+In **SQL Editor**, run this once with your own email:
+```
+insert into public.app_admins (user_id) select id from auth.users where email = 'you@example.com';
+```
+Then **Settings → Open admin view** appears in the app.
+
+## Before launch: legal
+The Privacy Policy and Terms (in the app under Settings, text in `mobile/src/lib/legal.ts`) are **drafts**. Fill in
+every `[BRACKETED]` item and have a lawyer review them, especially the face photo and birthday sections. The App
+Store also needs the privacy policy at a public web link. We'll publish it with the website.

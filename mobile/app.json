@@ -45,7 +45,8 @@
         {
           "cameraPermission": "Shape Up uses your camera to take photos and to scan client and shop QR codes."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": false,

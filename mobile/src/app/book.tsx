@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Chips } from '@/components/Segmented';
 import { Body, Button, Card, colors, Label, Loading, Notice, Screen, Title } from '@/components/ui';
 import { useAccount } from '@/lib/account';
+import { registerForPush } from '@/lib/notifications';
 import { addDays, dateKey, formatDay, formatShortDay, formatTime, startOfToday } from '@/lib/schedule';
 import { friendlyError, supabase } from '@/lib/supabase';
 
@@ -90,6 +91,7 @@ export default function Book() {
       return;
     }
     setBooked(picked);
+    registerForPush(true); // so we can remind them the day before
   }
 
   if (accountLoading) return <Loading />;
@@ -102,7 +104,10 @@ export default function Book() {
         <Notice tone="success">
           {formatDay(new Date(booked.starts_at))} at {formatTime(booked.starts_at)} with {booked.barber_name}.
         </Notice>
-        <Body muted>You’ll find it on your home screen. You can cancel there if plans change.</Body>
+        <Body muted>
+          You’ll find it on your home screen, and we’ll remind you the day before if notifications are on. You can
+          cancel there if plans change.
+        </Body>
         <Button title="Done" onPress={() => router.replace('/home')} />
       </Screen>
     );

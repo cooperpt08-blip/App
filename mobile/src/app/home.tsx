@@ -223,6 +223,7 @@ export default function CustomerHome() {
       <Button title="Get my haircut recommendations" onPress={() => router.push('/start' as Href)} disabled />
       <Body muted center>Recommendations arrive in the next build step.</Body>
 
+      <Button title="Settings" variant="secondary" onPress={() => router.push('/settings')} />
       <Button title="Sign out" variant="secondary" onPress={signOut} />
     </Screen>
   );

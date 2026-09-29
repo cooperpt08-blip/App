@@ -1,4 +1,5 @@
 import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Share, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -238,6 +239,8 @@ export default function ShopScreen() {
         </Card>
       )}
 
+      <Button title="Monthly report" onPress={() => router.push('/report')} />
+      <Button title="Settings" variant="secondary" onPress={() => router.push('/settings')} />
       <Button title="Sign out" variant="secondary" onPress={signOut} />
     </Screen>
   );

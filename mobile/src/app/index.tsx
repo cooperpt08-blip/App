@@ -33,6 +33,7 @@ export default function Index() {
   if (!session) return <Redirect href="/sign-in" />;
   if (!profile) return <Redirect href="/setup" />;
   if (membership) return <Redirect href={membership.role === 'owner' ? '/shop' : '/upcoming'} />;
+  if (profile.birth_date === null) return <Redirect href="/birthday" />;
   if (pending === undefined) return <Loading />;
   if (pending) return <Redirect href={`/join/${pending}` as Href} />;
   return <Redirect href="/home" />;

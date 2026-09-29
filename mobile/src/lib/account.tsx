@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { registerForPush, unregisterPush } from './notifications';
 import { supabase } from './supabase';
 
 export type Profile = {
@@ -9,6 +10,8 @@ export type Profile = {
   kind: 'customer' | 'staff';
   shop_id: string | null;
   avatar_updated_at: string | null;
+  // undefined = the database doesn't have birthdays yet (update not run); null = not given yet.
+  birth_date?: string | null;
 };
 
 export type Membership = {
@@ -22,6 +25,7 @@ type AccountState = {
   session: Session | null;
   profile: Profile | null;
   membership: Membership | null;
+  isAdmin: boolean;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -33,27 +37,29 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [membership, setMembership] = useState<Membership | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async (s: Session | null) => {
     if (!s) {
       setProfile(null);
       setMembership(null);
+      setIsAdmin(false);
       return;
     }
-    const [first, { data: m }] = await Promise.all([
-      supabase.from('profiles').select('id, first_name, kind, shop_id, avatar_updated_at').eq('id', s.user.id).maybeSingle(),
+    const [first, { data: m }, { data: admin }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', s.user.id).maybeSingle(),
       supabase.from('shop_members').select('shop_id, role, display_name').eq('user_id', s.user.id).maybeSingle(),
+      supabase.rpc('is_app_admin'),
     ]);
-    let p: unknown = first.data;
-    if (first.error) {
-      // The profile photo column arrives with the Clients database update. Until that's
-      // been run in Supabase, load the profile without it rather than failing.
-      const { data } = await supabase.from('profiles').select('id, first_name, kind, shop_id').eq('id', s.user.id).maybeSingle();
-      p = data ? { ...data, avatar_updated_at: null } : null;
-    }
+    // select('*') keeps working whichever database updates have been run so far.
+    const p: unknown = first.data ? { avatar_updated_at: null, ...first.data } : null;
     setProfile((p as Profile | null) ?? null);
     setMembership((m as Membership | null) ?? null);
+    setIsAdmin(admin === true);
+    // Barbers need to hear about new bookings, so ask them right away. Customers are
+    // asked after they book; here they're only registered if they already said yes.
+    registerForPush(Boolean(m));
   }, []);
 
   // Whose account is loaded right now, so a routine sign-in refresh doesn't reload everything.
@@ -82,11 +88,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(() => load(session), [load, session]);
   const signOut = useCallback(async () => {
+    await unregisterPush();
     await supabase.auth.signOut();
   }, []);
 
   return (
-    <AccountContext.Provider value={{ loading, session, profile, membership, refresh, signOut }}>
+    <AccountContext.Provider value={{ loading, session, profile, membership, isAdmin, refresh, signOut }}>
       {children}
     </AccountContext.Provider>
   );

@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { Text } from 'react-native';
 
-import { Body, Button, Eyebrow, Field, Notice, Screen, Title } from '@/components/ui';
+import { Body, Button, colors, Eyebrow, Field, Notice, Screen, Title } from '@/components/ui';
 import { friendlyError, supabase } from '@/lib/supabase';
 
 type Mode = 'sign-in' | 'sign-up' | 'check-email';
@@ -103,6 +104,19 @@ export default function SignIn() {
       />
       {error && <Notice tone="error">{error}</Notice>}
       <Button title={isSignUp ? 'Create account' : 'Sign in'} onPress={isSignUp ? signUp : signIn} loading={busy} disabled={!ready} />
+      {isSignUp && (
+        <Text style={{ fontSize: 14, lineHeight: 20, color: colors.muted }}>
+          By creating an account, you agree to the{' '}
+          <Text style={{ textDecorationLine: 'underline', color: colors.text }} onPress={() => router.push('/legal/terms')}>
+            Terms of Service
+          </Text>{' '}
+          and{' '}
+          <Text style={{ textDecorationLine: 'underline', color: colors.text }} onPress={() => router.push('/legal/privacy')}>
+            Privacy Policy
+          </Text>
+          .
+        </Text>
+      )}
       <Button
         title={isSignUp ? 'I already have an account' : 'Create a new account'}
         variant="secondary"
