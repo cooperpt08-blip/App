@@ -1,6 +1,7 @@
 -- Shape Up: hand a shop to a new owner
 -- ------------------------------------------------------------------
--- Run this AFTER the earlier files (SQL Editor -> New query -> paste -> Run, once).
+-- Run this AFTER the earlier files (SQL Editor -> New query -> paste -> Run).
+-- Safe to run again: it skips anything that already exists.
 --
 -- Before an owner can delete their account, they choose who takes over the shop:
 --   * one of their barbers (takes over immediately), or
@@ -12,12 +13,12 @@
 -- A shop can briefly have no owner while a new one accepts. Deleting the owner's
 -- account no longer deletes (or blocks) the shop.
 alter table public.shops alter column owner_id drop not null;
-alter table public.shops drop constraint shops_owner_id_fkey;
+alter table public.shops drop constraint if exists shops_owner_id_fkey;
 alter table public.shops add constraint shops_owner_id_fkey
   foreign key (owner_id) references auth.users (id) on delete set null;
 
 -- One pending "take over this shop" invite per shop.
-create table public.shop_owner_invites (
+create table if not exists public.shop_owner_invites (
   shop_id uuid primary key references public.shops (id) on delete cascade,
   email text not null check (email = lower(email) and email like '%_@_%'),
   invited_by uuid references auth.users (id) on delete set null,
@@ -26,13 +27,15 @@ create table public.shop_owner_invites (
 alter table public.shop_owner_invites enable row level security;
 revoke all on public.shop_owner_invites from anon, authenticated;
 grant select, delete on public.shop_owner_invites to authenticated;
+drop policy if exists "owner invites: shop owner reads" on public.shop_owner_invites;
 create policy "owner invites: shop owner reads" on public.shop_owner_invites for select to authenticated
   using (public.is_shop_owner(shop_id));
+drop policy if exists "owner invites: shop owner cancels" on public.shop_owner_invites;
 create policy "owner invites: shop owner cancels" on public.shop_owner_invites for delete to authenticated
   using (public.is_shop_owner(shop_id));
 
 -- Owner hands the shop to one of their barbers, right now. The old owner stays on as a barber.
-create function public.transfer_shop_to_member(p_shop uuid, p_new_owner uuid) returns void
+create or replace function public.transfer_shop_to_member(p_shop uuid, p_new_owner uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 begin
   if not public.is_shop_owner(p_shop) then raise exception 'Only the shop owner can hand over the shop'; end if;
@@ -48,7 +51,7 @@ end;
 $$;
 
 -- Owner invites someone by email to take over. Replaces any earlier invite for the shop.
-create function public.invite_shop_owner(p_shop uuid, p_email text) returns void
+create or replace function public.invite_shop_owner(p_shop uuid, p_email text) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
   v_email text := lower(trim(p_email));
@@ -61,7 +64,7 @@ end;
 $$;
 
 -- Shops waiting for the signed-in person to take over as owner.
-create function public.my_owner_invites() returns table (shop_id uuid, shop_name text)
+create or replace function public.my_owner_invites() returns table (shop_id uuid, shop_name text)
 language sql stable security definer set search_path = '' as $$
   select i.shop_id, s.name
   from public.shop_owner_invites i join public.shops s on s.id = i.shop_id
@@ -69,7 +72,7 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- The invited person accepts and becomes the owner.
-create function public.accept_owner_invite(p_shop uuid) returns void
+create or replace function public.accept_owner_invite(p_shop uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
   me public.profiles;
