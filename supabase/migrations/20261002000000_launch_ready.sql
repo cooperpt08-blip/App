@@ -20,7 +20,7 @@ alter table public.profiles add column birth_date date check (birth_date >= '190
 grant insert (birth_date) on public.profiles to authenticated;
 grant update (birth_date) on public.profiles to authenticated;
 
-create function public.check_birth_date() returns trigger
+create or replace function public.check_birth_date() returns trigger
 language plpgsql set search_path = '' as $$
 begin
   if new.birth_date is not null and new.birth_date > (current_date - interval '13 years')::date then
@@ -50,7 +50,7 @@ create policy "push tokens: remove own" on public.push_tokens for delete to auth
 
 -- The app calls this after sign-in. If the phone was last used by another account,
 -- it moves to the person signed in now, so notifications never go to the wrong person.
-create function public.register_push_token(p_token text, p_platform text) returns void
+create or replace function public.register_push_token(p_token text, p_platform text) returns void
 language plpgsql security definer set search_path = '' as $$
 begin
   if auth.uid() is null then raise exception 'Not signed in'; end if;
@@ -85,14 +85,14 @@ alter table public.app_admins enable row level security;
 revoke all on public.app_admins from anon, authenticated;
 -- Nobody can add admins from the app. Add yourself once in the SQL Editor (see README).
 
-create function public.is_app_admin() returns boolean
+create or replace function public.is_app_admin() returns boolean
 language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.app_admins a where a.user_id = auth.uid());
 $$;
 
 -- ============ Monthly report for a shop ============
 -- p_month: any date in the month you want, e.g. '2026-10-01'. Staff of the shop only.
-create function public.shop_report(p_shop uuid, p_month date) returns jsonb
+create or replace function public.shop_report(p_shop uuid, p_month date) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
 declare
   tz text := public.shop_timezone(p_shop);
@@ -141,7 +141,7 @@ $$;
 
 -- ============ Admin overview ============
 -- Everything you need to run the business, in one call. Admins only.
-create function public.admin_overview(p_month date) returns jsonb
+create or replace function public.admin_overview(p_month date) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
 declare
   month_start timestamptz := date_trunc('month', p_month)::timestamptz;
