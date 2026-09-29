@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.shapeup.app",
       "infoPlist": {
         "NSCameraUsageDescription": "Shape Up uses your camera to take photos and to scan client and shop QR codes.",
-        "NSPhotoLibraryUsageDescription": "Shape Up lets you choose a photo for your haircut recommendation."
+        "NSPhotoLibraryUsageDescription": "Shape Up lets you choose a photo for your haircut recommendation.",
+        "NSLocationWhenInUseUsageDescription": "Shape Up uses your location to show barbershops near you."
       }
     },
     "android": {
@@ -46,7 +47,13 @@
           "cameraPermission": "Shape Up uses your camera to take photos and to scan client and shop QR codes."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Shape Up uses your location to show barbershops near you."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false,

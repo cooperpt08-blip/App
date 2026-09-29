@@ -1,13 +1,14 @@
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Share, Text, View } from 'react-native';
+import { Alert, Share, Switch, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { Body, Button, Card, colors, Eyebrow, Field, Label, Notice, Screen, Title } from '@/components/ui';
 import { OwnerInvites } from '@/components/OwnerInvites';
 import { Chips } from '@/components/Segmented';
 import { useAccount } from '@/lib/account';
+import { findOnMap } from '@/lib/geo';
 import { APPOINTMENT_LENGTHS, deviceTimeZone } from '@/lib/schedule';
 import { friendlyError, supabase } from '@/lib/supabase';
 
@@ -19,6 +20,11 @@ type Shop = {
   // These two arrive with the scheduling database update.
   appointment_minutes?: number;
   timezone?: string | null;
+  // These arrive with the shop map database update.
+  phone?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  listed?: boolean;
 };
 type Member = { user_id: string; role: 'owner' | 'barber'; display_name: string };
 type Invite = { id: string; email: string; accepted_at: string | null };
@@ -31,6 +37,8 @@ export default function ShopScreen() {
   const [shop, setShop] = useState<Shop | null>(null);
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [listed, setListed] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -56,6 +64,8 @@ export default function ShopScreen() {
       setShop(s as Shop);
       setName(s.name);
       setAddress(s.address);
+      setPhone(s.phone ?? '');
+      setListed(s.listed ?? true);
     }
     setMembers((m as Member[] | null) ?? []);
     setInvites((i as Invite[] | null) ?? []);
@@ -79,10 +89,31 @@ export default function ShopScreen() {
 
   async function saveDetails() {
     setBusy('details');
-    const { error } = await supabase.from('shops').update({ name: name.trim(), address: address.trim() }).eq('id', shop!.id);
+    const hasMap = shop!.listed !== undefined; // the shop map database update has been run
+    const changes: Record<string, unknown> = { name: name.trim(), address: address.trim() };
+    let place: { latitude: number; longitude: number } | null = null;
+    if (hasMap) {
+      changes.phone = phone.trim();
+      changes.listed = listed;
+      // Put the shop on the map from its address (only look it up again if it changed).
+      place =
+        address.trim() === shop!.address && shop!.latitude != null && shop!.longitude != null
+          ? { latitude: shop!.latitude, longitude: shop!.longitude }
+          : await findOnMap(address.trim());
+      changes.latitude = place?.latitude ?? null;
+      changes.longitude = place?.longitude ?? null;
+    }
+    const { error } = await supabase.from('shops').update(changes).eq('id', shop!.id);
     setBusy(null);
-    setMessage(error ? { tone: 'error', text: friendlyError(error) } : { tone: 'success', text: 'Shop details saved.' });
-    if (!error) load();
+    if (error) return setMessage({ tone: 'error', text: friendlyError(error) });
+    setMessage(
+      !hasMap
+        ? { tone: 'success', text: 'Shop details saved.' }
+        : place
+          ? { tone: 'success', text: listed ? 'Saved. Your shop is on the Shape Up map.' : 'Saved. Your shop is hidden from the map.' }
+          : { tone: 'error', text: 'Saved, but we couldn’t find that address on the map. Include the street, city and state.' },
+    );
+    load();
   }
 
   function newCode() {
@@ -178,7 +209,35 @@ export default function ShopScreen() {
         <Card>
           <Label>Shop details</Label>
           <Field label="Shop name" value={name} onChangeText={setName} maxLength={80} />
-          <Field label="Address" value={address} onChangeText={setAddress} maxLength={200} />
+          <Field
+            label="Address"
+            hint="Street, city and state, so clients can find you on the map."
+            value={address}
+            onChangeText={setAddress}
+            maxLength={200}
+          />
+          {shop.listed !== undefined && (
+            <>
+              <Field
+                label="Phone number"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                maxLength={30}
+                placeholder="(214) 555-0100"
+              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Show my shop on the map</Text>
+                  <Body muted>New clients can find you and join with one tap.</Body>
+                </View>
+                <Switch value={listed} onValueChange={setListed} />
+              </View>
+              {shop.latitude == null && address.trim() !== '' && (
+                <Body muted>Not on the map yet. Tap Save details to place it.</Body>
+              )}
+            </>
+          )}
           <Button title="Save details" onPress={saveDetails} loading={busy === 'details'} disabled={!name.trim()} />
         </Card>
       )}

@@ -28,7 +28,7 @@ export const PRIVACY_POLICY: LegalSection[] = [
       'Appointments: the barbershop, barber, date and time of bookings you make, and whether they happened.',
       'Your barbershop link: which shop you joined by scanning its QR code, and any shops you shared your cut card code with.',
       'For barbers and shop owners: shop name and address, the name you show clients, your working hours and days off, appointment statuses, and notes you write about clients.',
-      'Device information: a notification token so we can send you notifications, and your phone type (iPhone or Android). We do not collect your location, contacts, or advertising identifiers, and we do not track you across other apps or websites.',
+      'Device information: a notification token so we can send you notifications, and your phone type (iPhone or Android). If you allow location, the app uses it only on your phone to show barbershops near you; it is not sent to us or stored. We do not collect your contacts or advertising identifiers, and we do not track you across other apps or websites.',
     ],
   },
   {
@@ -137,7 +137,7 @@ export const TERMS_OF_SERVICE: LegalSection[] = [
   {
     heading: 'For shop owners and barbers',
     paragraphs: [
-      'Shop owners may be charged a subscription fee as agreed separately with Shape Up [add pricing and billing terms]. Owners are responsible for who they invite as barbers. Use clients’ information and photos only to serve those clients, keep it confidential, and follow applicable privacy laws. Do not download, copy, or share client photos outside the app.',
+      'Shop owners may be charged a subscription fee as agreed separately with Shape Up [add pricing and billing terms]. Owners are responsible for who they invite as barbers. Unless the owner turns it off, the shop’s name, address, phone number and map location are shown to everyone who uses Shape Up, and customers can join the shop from the map. Use clients’ information and photos only to serve those clients, keep it confidential, and follow applicable privacy laws. Do not download, copy, or share client photos outside the app.',
     ],
   },
   {

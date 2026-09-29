@@ -197,6 +197,7 @@ export default function CustomerHome() {
           <>
             <Body>Not linked to a shop yet. Scan the QR code at your barbershop, or type the code below.</Body>
             <Body muted>Without a shop you get 1 free recommendation.</Body>
+            <Button title="Find a shop on the map" onPress={() => router.push('/shops')} />
             <Field
               label="Shop code"
               value={code}
@@ -213,6 +214,10 @@ export default function CustomerHome() {
       </Card>
 
       {shop && <AppointmentsCard />}
+
+      {shop && (
+        <Button title="Find other barbershops near me" variant="secondary" onPress={() => router.push('/shops')} />
+      )}
 
       <ProfilePhotoCard />
 
