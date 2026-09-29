@@ -45,13 +45,10 @@ Each step is built, then you test it before we move on.
 2. **Create the database.** In your project, open **SQL Editor → New query**. Open the file
    `supabase/migrations/20260929000000_shape_up.sql` from this repository, copy all of it, paste it in,
    and click **Run**. You should see "Success. No rows returned".
-3. **Turn on email codes.** Go to **Authentication → Emails** (it may be called Email Templates) and open the
-   **Magic Link** template. Replace the message with:
-   ```
-   <h2>Your Shape Up code</h2>
-   <p>Enter this code in the app: <strong>{{ .Token }}</strong></p>
-   ```
-   Do the same for the **Confirm signup** template. Save both.
+3. **Leave email sign-in as it is.** People sign in with an email and password. New accounts get Supabase's
+   standard "Confirm your signup" email, so there's nothing to change. Keep **Confirm email** turned on
+   (Authentication → Sign In / Providers → Email). It's on by default, and it stops someone from signing up
+   with a barber's email address to take their shop invite.
 4. **Copy your app keys.** Go to **Project Settings → API**. Copy the **Project URL** and the
    **anon public** key (or the "publishable" key).
 
