@@ -8,6 +8,7 @@ export type Profile = {
   first_name: string;
   kind: 'customer' | 'staff';
   shop_id: string | null;
+  avatar_updated_at: string | null;
 };
 
 export type Membership = {
@@ -40,10 +41,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setMembership(null);
       return;
     }
-    const [{ data: p }, { data: m }] = await Promise.all([
-      supabase.from('profiles').select('id, first_name, kind, shop_id').eq('id', s.user.id).maybeSingle(),
+    const [first, { data: m }] = await Promise.all([
+      supabase.from('profiles').select('id, first_name, kind, shop_id, avatar_updated_at').eq('id', s.user.id).maybeSingle(),
       supabase.from('shop_members').select('shop_id, role, display_name').eq('user_id', s.user.id).maybeSingle(),
     ]);
+    let p: unknown = first.data;
+    if (first.error) {
+      // The profile photo column arrives with the Clients database update. Until that's
+      // been run in Supabase, load the profile without it rather than failing.
+      const { data } = await supabase.from('profiles').select('id, first_name, kind, shop_id').eq('id', s.user.id).maybeSingle();
+      p = data ? { ...data, avatar_updated_at: null } : null;
+    }
     setProfile((p as Profile | null) ?? null);
     setMembership((m as Membership | null) ?? null);
   }, []);

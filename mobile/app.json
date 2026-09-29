@@ -12,7 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.shapeup.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Shape Up uses your camera to take the photos for your haircut recommendation.",
+        "NSCameraUsageDescription": "Shape Up uses your camera to take photos and to scan client and shop QR codes.",
         "NSPhotoLibraryUsageDescription": "Shape Up lets you choose a photo for your haircut recommendation."
       }
     },
@@ -38,6 +38,12 @@
           "backgroundColor": "#208AEF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Shape Up uses your camera to take photos and to scan client and shop QR codes."
         }
       ]
     ],

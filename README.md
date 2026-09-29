@@ -20,6 +20,7 @@ Each step is built, then you test it before we move on.
 | Step | What | Status |
 |---|---|---|
 | 1 | Database and security rules, sign-in, shop owners create a shop with a QR code, invite barbers, customers link to a shop | ✅ built, ready to test |
+| 1b | Clients tab for barbers (name, photo, usual cut), customer profile photos, and a QR code customers show at a new shop to share their cut cards | ✅ built, ready to test |
 | 2 | Customer flow in the app: photos, questions, recommendations (free demo mode until you add a Claude key), monthly limits | next |
 | 3 | "Send to my barbershop": pick a cut, a barber, an appointment time, and give photo permission | |
 | 4 | Barbers' "Upcoming cuts" tab: live updates, new-card badge, statuses, notes, full-size photos | |
@@ -45,6 +46,10 @@ Each step is built, then you test it before we move on.
 2. **Create the database.** In your project, open **SQL Editor → New query**. Open the file
    `supabase/migrations/20260929000000_shape_up.sql` from this repository, copy all of it, paste it in,
    and click **Run**. You should see "Success. No rows returned".
+   Then do the same with **each other file in that folder, in date order** (the date is the start of the
+   file name). Run each file only once. So far:
+   - `20260929000000_shape_up.sql`: shops, barbers, customers, cut cards
+   - `20260930000000_clients.sql`: Clients tab, profile photos, sharing a cut card with a new shop
 3. **Leave email sign-in as it is.** People sign in with an email and password. New accounts get Supabase's
    standard "Confirm your signup" email, so there's nothing to change. Keep **Confirm email** turned on
    (Authentication → Sign In / Providers → Email). It's on by default, and it stops someone from signing up

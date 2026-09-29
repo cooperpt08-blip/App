@@ -1,10 +1,74 @@
 import { router, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 
+import { Avatar } from '@/components/Avatar';
 import { Body, Button, Card, Eyebrow, Field, Label, Notice, Screen, Title } from '@/components/ui';
 import { useAccount } from '@/lib/account';
+import { pickSquarePhoto, profilePhotoUrls, removeProfilePhoto, uploadProfilePhoto } from '@/lib/photos';
 import { friendlyError, supabase } from '@/lib/supabase';
+
+// Optional photo so barbers recognize the customer. Only shops they use can see it.
+function ProfilePhotoCard() {
+  const { profile, refresh } = useAccount();
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasPhoto = Boolean(profile?.avatar_updated_at);
+
+  useEffect(() => {
+    if (!profile || !hasPhoto) return setUrl(null);
+    profilePhotoUrls([profile.id]).then((urls) => setUrl(urls[profile.id] ?? null));
+  }, [profile, hasPhoto]);
+
+  async function choose(source: 'camera' | 'library') {
+    setError(null);
+    try {
+      const uri = await pickSquarePhoto(source);
+      if (!uri || !profile) return;
+      setBusy(true);
+      await uploadProfilePhoto(profile.id, uri);
+      await refresh();
+    } catch (e) {
+      setError(friendlyError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (!profile) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await removeProfilePhoto(profile.id);
+      await refresh();
+    } catch (e) {
+      setError(friendlyError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!profile) return null;
+  return (
+    <Card>
+      <Label>Profile photo (optional)</Label>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <Avatar name={profile.first_name} url={url} size={80} />
+        <View style={{ flex: 1 }}>
+          <Body muted>
+            Helps your barber recognize you. Only barbershops you use can see it. Remove it anytime.
+          </Body>
+        </View>
+      </View>
+      {error && <Notice tone="error">{error}</Notice>}
+      <Button title={hasPhoto ? 'Take a new photo' : 'Take a photo'} onPress={() => choose('camera')} loading={busy} />
+      <Button title="Choose from my photos" variant="secondary" onPress={() => choose('library')} disabled={busy} />
+      {hasPhoto && <Button title="Remove photo" variant="danger" onPress={remove} disabled={busy} />}
+    </Card>
+  );
+}
 
 type Shop = { id: string; name: string; address: string };
 
@@ -81,6 +145,14 @@ export default function CustomerHome() {
             <Button title="Join shop" onPress={joinWithCode} loading={busy} disabled={code.trim().length !== 6} />
           </>
         )}
+      </Card>
+
+      <ProfilePhotoCard />
+
+      <Card>
+        <Label>Going to a different barbershop?</Label>
+        <Body>If they use Shape Up too, show them your code so your new barber can see your usual cut.</Body>
+        <Button title="Show my cut card code" variant="secondary" onPress={() => router.push('/share-card')} />
       </Card>
 
       <Button title="Get my haircut recommendations" onPress={() => router.push('/start' as Href)} disabled />
