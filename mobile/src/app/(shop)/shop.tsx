@@ -301,6 +301,7 @@ export default function ShopScreen() {
       )}
 
       <Button title="Monthly report" onPress={() => router.push('/report')} />
+      <Button title="See the shop map" variant="secondary" onPress={() => router.push('/shops')} />
       <Button title="Settings" variant="secondary" onPress={() => router.push('/settings')} />
       <Button title="Sign out" variant="secondary" onPress={signOut} />
     </Screen>
