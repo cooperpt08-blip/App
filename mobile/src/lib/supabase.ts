@@ -33,7 +33,10 @@ if (Platform.OS !== 'web') {
 // Turns a database or network error into a sentence a person can act on.
 export function friendlyError(error: unknown): string {
   if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-    if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
+    if (error.message.includes('certificate')) {
+      return 'Couldn’t connect securely. The Wi-Fi you’re on may be blocking Shape Up. Try another network or cellular data.';
+    }
+    if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed') || error.message.includes('fetch failed')) {
       return "Can't reach Shape Up. Check your internet connection and try again.";
     }
     return error.message;
