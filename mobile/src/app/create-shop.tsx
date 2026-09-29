@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 
 import { Body, Button, Field, Notice, Screen, Title } from '@/components/ui';
@@ -6,7 +6,7 @@ import { useAccount } from '@/lib/account';
 import { friendlyError, supabase } from '@/lib/supabase';
 
 export default function CreateShop() {
-  const { profile, refresh } = useAccount();
+  const { profile, membership, refresh } = useAccount();
   const [shopName, setShopName] = useState('');
   const [address, setAddress] = useState('');
   const [displayName, setDisplayName] = useState(profile?.first_name ?? '');
@@ -26,6 +26,9 @@ export default function CreateShop() {
     await refresh();
     router.replace('/shop');
   }
+
+  // Already owns or works at a shop: show that shop instead.
+  if (membership) return <Redirect href="/" />;
 
   return (
     <Screen>

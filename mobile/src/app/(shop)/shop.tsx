@@ -86,15 +86,23 @@ export default function ShopScreen() {
       return setMessage({ tone: 'error', text: duplicate ? 'You already invited that email.' : friendlyError(error) });
     }
     setInviteEmail('');
-    setMessage({ tone: 'success', text: `Invite saved. ${email} can now sign in to Shape Up and join as a barber.` });
+    setMessage({
+      tone: 'success',
+      text: `Invite saved. ${email} joins your shop as soon as they create a Shape Up account with that email.`,
+    });
     load();
-    // Open the phone's email app with a ready-to-send message.
-    const subject = encodeURIComponent(`Join ${shop!.name} on Shape Up`);
-    const body = encodeURIComponent(
-      `Hi! I've added you as a barber at ${shop!.name} on Shape Up, so you'll see the cut cards our clients send.\n\n` +
-        `1. Download the Shape Up app\n2. Sign in with this email address: ${email}\n3. Tap "Join as a barber"`,
-    );
-    Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {});
+    shareInvite(email);
+  }
+
+  // Opens the phone's share menu (Messages, Gmail, WhatsApp…) with a ready-made invite.
+  function shareInvite(email: string) {
+    Share.share({
+      message:
+        `You're invited to join ${shop!.name} on Shape Up as a barber, so you'll see the cut cards our clients send.\n\n` +
+        `1. Download the Shape Up app\n` +
+        `2. Tap "Create a new account" and use this email: ${email}\n` +
+        `3. Tap "Join as a barber"`,
+    }).catch(() => {});
   }
 
   function cancelInvite(inv: Invite) {
@@ -178,12 +186,16 @@ export default function ShopScreen() {
             keyboardType="email-address"
             placeholder="barber@example.com"
           />
-          <Button title="Send invite" onPress={invite} loading={busy === 'invite'} disabled={!inviteEmail.includes('@')} />
+          <Body muted>They’ll join your shop when they create a Shape Up account with this email. You can send them the invite by text or email next.</Body>
+          <Button title="Invite" onPress={invite} loading={busy === 'invite'} disabled={!inviteEmail.includes('@')} />
           {invites.length > 0 && <Label>Waiting to join</Label>}
           {invites.map((inv) => (
             <View key={inv.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}>
               <Text style={{ flex: 1, fontSize: 16 }}>{inv.email}</Text>
-              <View style={{ width: 120 }}>
+              <View style={{ width: 96 }}>
+                <Button title="Share" variant="secondary" onPress={() => shareInvite(inv.email)} />
+              </View>
+              <View style={{ width: 96 }}>
                 <Button title="Cancel" variant="secondary" onPress={() => cancelInvite(inv)} />
               </View>
             </View>

@@ -1,8 +1,8 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { Body, Button, Card, Eyebrow, Field, Notice, Screen, Title } from '@/components/ui';
+import { Body, Button, Card, Eyebrow, Field, Loading, Notice, Screen, Title } from '@/components/ui';
 import { useAccount } from '@/lib/account';
 import { friendlyError, supabase } from '@/lib/supabase';
 
@@ -11,7 +11,7 @@ type Invite = { invite_id: string; shop_name: string };
 // First-time setup: your first name, then whether you're a customer, a barber
 // (if a shop invited your email), or a shop owner.
 export default function Setup() {
-  const { session, profile, refresh, signOut } = useAccount();
+  const { loading, session, profile, membership, refresh, signOut } = useAccount();
   const [name, setName] = useState('');
   const [invites, setInvites] = useState<Invite[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -39,6 +39,11 @@ export default function Setup() {
     await refresh();
     router.replace('/');
   }
+
+  if (loading) return <Loading />;
+  if (!session) return <Redirect href="/sign-in" />;
+  // Already part of a shop: go straight there instead of asking again.
+  if (membership) return <Redirect href="/" />;
 
   if (!profile) {
     return (

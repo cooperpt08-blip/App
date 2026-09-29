@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js';
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { supabase } from './supabase';
 
@@ -48,16 +48,26 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     setMembership((m as Membership | null) ?? null);
   }, []);
 
+  // Whose account is loaded right now, so a routine sign-in refresh doesn't reload everything.
+  const loadedUser = useRef<string | null | undefined>(undefined);
+
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session);
-      await load(data.session);
-      setLoading(false);
-    });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      const userId = s?.user.id ?? null;
+      if (userId === loadedUser.current) {
+        setSession(s);
+        return;
+      }
+      // A different person signed in or out: hold every screen on "loading" until
+      // their profile and shop are loaded, so nobody gets sent to the wrong place.
+      loadedUser.current = userId;
+      setLoading(true);
       setSession(s);
       // Supabase asks us not to wait on other Supabase calls inside this callback.
-      setTimeout(() => load(s), 0);
+      setTimeout(async () => {
+        await load(s);
+        setLoading(false);
+      }, 0);
     });
     return () => sub.subscription.unsubscribe();
   }, [load]);
