@@ -21,6 +21,9 @@ export default function StartPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Recommendation | null>(null);
+  // The shrunk front photo, kept only in this browser tab for "See it on me"
+  // previews. It is gone as soon as the customer leaves or starts over.
+  const [previewPhoto, setPreviewPhoto] = useState<Blob | null>(null);
 
   const next = () => setStep((s) => s + 1);
   const back = () => setStep((s) => Math.max(0, s - 1));
@@ -31,7 +34,8 @@ export default function StartPage() {
     setError(null);
     try {
       const form = new FormData();
-      form.append("front", await resizePhoto(front), "front.jpg");
+      const frontJpeg = await resizePhoto(front);
+      form.append("front", frontJpeg, "front.jpg");
       if (side) form.append("side", await resizePhoto(side), "side.jpg");
       form.append("answers", JSON.stringify(answers));
 
@@ -39,7 +43,8 @@ export default function StartPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
       setResult(data.recommendation);
-      // Drop the photos from the page too, now that we're done with them.
+      setPreviewPhoto(frontJpeg);
+      // Drop the original photos from the page, now that we're done with them.
       setFront(null);
       setSide(null);
     } catch (e) {
@@ -51,12 +56,21 @@ export default function StartPage() {
 
   function restart() {
     setResult(null);
+    setPreviewPhoto(null);
     setAnswers(emptyAnswers);
     setStep(0);
   }
 
   if (result) {
-    return <Results result={result} workAround={answers.workAround} onRestart={restart} />;
+    return (
+      <Results
+        result={result}
+        workAround={answers.workAround}
+        texture={answers.texture}
+        photo={previewPhoto}
+        onRestart={restart}
+      />
+    );
   }
 
   if (loading) {
