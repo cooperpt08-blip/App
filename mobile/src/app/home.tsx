@@ -1,12 +1,75 @@
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Body, Button, Card, Eyebrow, Field, Label, Notice, Screen, Title } from '@/components/ui';
 import { useAccount } from '@/lib/account';
+import { formatDay, formatTime } from '@/lib/schedule';
 import { pickSquarePhoto, profilePhotoUrls, removeProfilePhoto, uploadProfilePhoto } from '@/lib/photos';
 import { friendlyError, supabase } from '@/lib/supabase';
+
+type MyAppointment = {
+  appointment_id: string;
+  shop_name: string;
+  barber_name: string | null;
+  starts_at: string;
+  status: 'booked' | 'cancelled' | 'done' | 'no_show';
+};
+
+// Upcoming bookings, and the button to make one.
+function AppointmentsCard() {
+  const [items, setItems] = useState<MyAppointment[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.rpc('my_appointments');
+    setItems(((data as MyAppointment[] | null) ?? []).filter((a) => a.status === 'booked'));
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  function cancel(a: MyAppointment) {
+    Alert.alert('Cancel this appointment?', `${formatDay(new Date(a.starts_at))} at ${formatTime(a.starts_at)}`, [
+      { text: 'Keep it', style: 'cancel' },
+      {
+        text: 'Cancel appointment',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase.rpc('cancel_appointment', { p_appointment: a.appointment_id });
+          setError(error ? friendlyError(error) : null);
+          load();
+        },
+      },
+    ]);
+  }
+
+  return (
+    <Card>
+      <Label>Appointments</Label>
+      {items.length === 0 && <Body muted>No upcoming appointments.</Body>}
+      {items.map((a) => (
+        <View key={a.appointment_id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 17, fontWeight: '700' }}>
+              {formatDay(new Date(a.starts_at))}, {formatTime(a.starts_at)}
+            </Text>
+            <Body muted>{a.barber_name ? `With ${a.barber_name}` : a.shop_name}</Body>
+          </View>
+          <View style={{ width: 110 }}>
+            <Button title="Cancel" variant="danger" onPress={() => cancel(a)} />
+          </View>
+        </View>
+      ))}
+      {error && <Notice tone="error">{error}</Notice>}
+      <Button title="Book an appointment" onPress={() => router.push('/book')} />
+    </Card>
+  );
+}
 
 // Optional photo so barbers recognize the customer. Only shops they use can see it.
 function ProfilePhotoCard() {
@@ -146,6 +209,8 @@ export default function CustomerHome() {
           </>
         )}
       </Card>
+
+      {shop && <AppointmentsCard />}
 
       <ProfilePhotoCard />
 

@@ -20,6 +20,7 @@ export default function ShopLayout() {
         tabBarIconStyle: { display: 'none' },
       }}>
       <Tabs.Screen name="upcoming" options={{ title: 'Upcoming cuts' }} />
+      <Tabs.Screen name="schedule" options={{ title: 'Schedule' }} />
       <Tabs.Screen name="clients" options={{ title: 'Clients' }} />
       <Tabs.Screen name="shop" options={{ title: membership.role === 'owner' ? 'My shop' : 'Shop' }} />
     </Tabs>

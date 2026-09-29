@@ -4,10 +4,20 @@ import { Alert, Share, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { Body, Button, Card, colors, Eyebrow, Field, Label, Notice, Screen, Title } from '@/components/ui';
+import { Chips } from '@/components/Segmented';
 import { useAccount } from '@/lib/account';
+import { APPOINTMENT_LENGTHS, deviceTimeZone } from '@/lib/schedule';
 import { friendlyError, supabase } from '@/lib/supabase';
 
-type Shop = { id: string; name: string; address: string; join_code: string };
+type Shop = {
+  id: string;
+  name: string;
+  address: string;
+  join_code: string;
+  // These two arrive with the scheduling database update.
+  appointment_minutes?: number;
+  timezone?: string | null;
+};
 type Member = { user_id: string; role: 'owner' | 'barber'; display_name: string };
 type Invite = { id: string; email: string; accepted_at: string | null };
 
@@ -28,13 +38,19 @@ export default function ShopScreen() {
   const load = useCallback(async () => {
     if (!shopId) return;
     const [{ data: s }, { data: m }, { data: i }] = await Promise.all([
-      supabase.from('shops').select('id, name, address, join_code').eq('id', shopId).single(),
+      supabase.from('shops').select('*').eq('id', shopId).single(),
       supabase.from('shop_members').select('user_id, role, display_name').eq('shop_id', shopId).order('joined_at'),
       isOwner
         ? supabase.from('barber_invites').select('id, email, accepted_at').eq('shop_id', shopId).is('accepted_at', null)
         : Promise.resolve({ data: [] }),
     ]);
     if (s) {
+      // Bookings use the shop's time zone; set it from the owner's phone the first time.
+      if (isOwner && 'timezone' in s && !s.timezone) {
+        const timezone = deviceTimeZone();
+        await supabase.from('shops').update({ timezone }).eq('id', s.id);
+        s.timezone = timezone;
+      }
       setShop(s as Shop);
       setName(s.name);
       setAddress(s.address);
@@ -52,6 +68,12 @@ export default function ShopScreen() {
   // In the App Store build this is shapeup://join/CODE. While testing in Expo Go
   // it's an exp:// link so the phone camera can still open it.
   const joinLink = Linking.createURL(`join/${shop.join_code}`);
+
+  async function setLength(minutes: number) {
+    const { error } = await supabase.from('shops').update({ appointment_minutes: minutes }).eq('id', shop!.id);
+    if (error) setMessage({ tone: 'error', text: friendlyError(error) });
+    load();
+  }
 
   async function saveDetails() {
     setBusy('details');
@@ -155,6 +177,19 @@ export default function ShopScreen() {
           <Field label="Shop name" value={name} onChangeText={setName} maxLength={80} />
           <Field label="Address" value={address} onChangeText={setAddress} maxLength={200} />
           <Button title="Save details" onPress={saveDetails} loading={busy === 'details'} disabled={!name.trim()} />
+        </Card>
+      )}
+
+      {isOwner && shop.appointment_minutes !== undefined && (
+        <Card>
+          <Label>Appointment length</Label>
+          <Body muted>How long each booking slot is. Applies to new bookings.</Body>
+          <Chips
+            options={APPOINTMENT_LENGTHS.map((m) => ({ value: m, label: m < 60 ? `${m} min` : m === 60 ? '1 hour' : '1½ hours' }))}
+            value={shop.appointment_minutes}
+            onChange={setLength}
+          />
+          {shop.timezone ? <Body muted>Time zone: {shop.timezone}</Body> : null}
         </Card>
       )}
 
