@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Share, Text, View } from 'react-native';
 
 import { Body, Button, Card, colors, Label, Loading, Notice, Screen, Title } from '@/components/ui';
+import { useAccount } from '@/lib/account';
 import type { Cut, Recommendation } from '@/lib/recommendation';
 import { friendlyError, supabase } from '@/lib/supabase';
 
@@ -18,7 +19,7 @@ function Detail({ label, text }: { label: string; text: string }) {
   );
 }
 
-function CutCard({ cut, rank }: { cut: Cut; rank: number }) {
+function CutCard({ cut, rank, onSend }: { cut: Cut; rank: number; onSend?: () => void }) {
   return (
     <Card>
       <View style={{ gap: 4 }}>
@@ -42,8 +43,9 @@ function CutCard({ cut, rank }: { cut: Cut; rank: number }) {
       <Detail label="Upkeep" text={cut.upkeep} />
       <Detail label="Grow it out first?" text={cut.growOutFirst} />
 
+      {onSend && <Button title="Send to my barbershop" onPress={onSend} />}
       <Button
-        title="Share with my barber"
+        title={onSend ? 'Share as a message instead' : 'Share with my barber'}
         variant="secondary"
         onPress={() => Share.share({ message: `Here’s the haircut I want: ${cut.name}\n\n${cut.tellYourBarber}` })}
       />
@@ -54,6 +56,7 @@ function CutCard({ cut, rank }: { cut: Cut; rank: number }) {
 // A customer's recommendation: face shape, notes, 3 cuts and cuts to avoid.
 export default function Results() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { profile } = useAccount();
   const [row, setRow] = useState<Row | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,7 +101,12 @@ export default function Results() {
       </Card>
 
       {r.cuts.map((cut, i) => (
-        <CutCard key={`${cut.name}-${i}`} cut={cut} rank={i + 1} />
+        <CutCard
+          key={`${cut.name}-${i}`}
+          cut={cut}
+          rank={i + 1}
+          onSend={profile?.shop_id ? () => router.push(`/send-card?rec=${row.id}&cut=${i}`) : undefined}
+        />
       ))}
 
       {r.avoid.length > 0 && (
@@ -113,7 +121,11 @@ export default function Results() {
         </View>
       )}
 
-      <Body muted center>Your photos were not saved. Sending a cut straight to your barbershop is coming next.</Body>
+      <Body muted center>
+        {profile?.shop_id
+          ? 'We didn’t save your photos. If you send a cut to your barbershop, we’ll ask before sharing them.'
+          : 'We didn’t save your photos. Join a barbershop to send cuts straight to your barber.'}
+      </Body>
     </Screen>
   );
 }

@@ -6,11 +6,73 @@ import { Avatar } from '@/components/Avatar';
 import { Body, Button, Card, Eyebrow, Field, Label, Notice, Screen, Title } from '@/components/ui';
 import { OwnerInvites } from '@/components/OwnerInvites';
 import { useAccount } from '@/lib/account';
+import { CARD_BUCKET, cardPhotoPath, formatWhen, STATUS_LABEL, type CutCardRow } from '@/lib/cutCards';
 import { formatDay, formatTime } from '@/lib/schedule';
 import { pickSquarePhoto, profilePhotoUrls, removeProfilePhoto, uploadProfilePhoto } from '@/lib/photos';
 import { friendlyError, supabase } from '@/lib/supabase';
 
 // The customer's latest recommendations, to reopen any time.
+// Cut cards the customer sent to their barbershop, with the barber's progress.
+function SentCards() {
+  const [cards, setCards] = useState<CutCardRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from('cut_cards')
+      .select('*')
+      .neq('status', 'done')
+      .order('created_at', { ascending: false })
+      .limit(5);
+    setCards((data as CutCardRow[] | null) ?? []);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  function cancel(card: CutCardRow) {
+    Alert.alert('Cancel this cut card?', 'Your barbershop will no longer see it, and any photo you shared is deleted now.', [
+      { text: 'Keep it', style: 'cancel' },
+      {
+        text: 'Cancel card',
+        style: 'destructive',
+        onPress: async () => {
+          await supabase.storage
+            .from(CARD_BUCKET)
+            .remove([cardPhotoPath(card, 'front'), cardPhotoPath(card, 'side')]);
+          const { error } = await supabase.from('cut_cards').delete().eq('id', card.id);
+          setError(error ? friendlyError(error) : null);
+          load();
+        },
+      },
+    ]);
+  }
+
+  if (cards.length === 0) return null;
+  return (
+    <Card>
+      <Label>Sent to your barber</Label>
+      {cards.map((c) => (
+        <View key={c.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 17, fontWeight: '700' }}>{c.cut.name}</Text>
+            <Body muted>
+              {STATUS_LABEL[c.status] === 'New' ? 'Sent' : STATUS_LABEL[c.status]} · {formatWhen(c.appointment_at)}
+            </Body>
+          </View>
+          <View style={{ width: 110 }}>
+            <Button title="Cancel" variant="danger" onPress={() => cancel(c)} />
+          </View>
+        </View>
+      ))}
+      {error && <Notice tone="error">{error}</Notice>}
+    </Card>
+  );
+}
+
 function PastRecommendations() {
   const [items, setItems] = useState<{ id: string; created_at: string; is_demo: boolean; result: { cuts?: { name: string }[] } }[]>([]);
 
@@ -217,6 +279,7 @@ export default function CustomerHome() {
       {invites.length > 0 && <Button title="Accept barber invite" variant="secondary" onPress={() => router.push('/setup')} />}
 
       <Button title="✨ Get my haircut recommendations" onPress={() => router.push('/recommend')} />
+      <SentCards />
       <PastRecommendations />
 
       <Card>

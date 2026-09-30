@@ -23,10 +23,9 @@ Each step is built, then you test it before we move on.
 | 1b | Clients tab for barbers (name, photo, usual cut), customer profile photos, and a QR code customers show at a new shop to share their cut cards | ✅ built, ready to test |
 | 1c | Scheduling: barbers set weekly hours and days off, customers book open times, Schedule tab for the shop | ✅ built, ready to test |
 | 1d | Account deletion, privacy policy and terms (drafts), push notifications, day-before reminders, monthly shop report, admin view, customer birthday | ✅ built, needs the server setup below |
-| 2 | Customer flow in the app (planned: a "describe the cut you want" box before the photo, guided photo capture with MediaPipe, and trend research on the web before recommending): photos, questions, recommendations (free demo mode until you add a Claude key), monthly limits | next |
-| 3 | "Send to my barbershop": pick a cut, a barber, an appointment time, and give photo permission | |
-| 4 | Barbers' "Upcoming cuts" tab: live updates, new-card badge, statuses, notes, full-size photos | |
-| 5 | Automatic photo deletion, updated privacy wording, a slot for AI preview images (no paid service until you approve one) | |
+| 2a | Customer flow: "describe the cut you want" box, guided photo capture with MediaPipe, trend research, 3 recommendations (free demo mode until you add a Claude key), monthly limits | ✅ built, ready to test |
+| 2b | "Send to my barbershop" (pick a booking or barber, optional photo with permission), barbers' "Upcoming cuts" tab with live updates, new-card badge, statuses, notes, full-size photos, automatic photo deletion | ✅ built, needs the cleanup job below |
+| 3 | A slot for AI preview images (no paid service until you approve one), shop billing | |
 | Last | Add AI keys, publish to the App Store and Google Play | |
 
 ## Accounts you need
@@ -57,6 +56,7 @@ Each step is built, then you test it before we move on.
    - `20261003000000_ownership.sql`: shop owners hand their shop to a barber or a new owner by email
    - `20261004000000_shop_map.sql`: map of barbershops (phone number, map position, join from the map)
    - `20261005000000_recommendations.sql`: recommendation limits and the trend research cache
+   - `20261006000000_cut_cards.sql`: sending a cut card to the shop, linked to a booking, with optional photos
 3. **Leave email sign-in as it is.** People sign in with an email and password. New accounts get Supabase's
    standard "Confirm your signup" email, so there's nothing to change. Keep **Confirm email** turned on
    (Authentication → Sign In / Providers → Email). It's on by default, and it stops someone from signing up
@@ -111,6 +111,7 @@ sample code, paste the whole file from GitHub, then click **Deploy**.
 | `notify` | `supabase/functions/notify/index.ts` | Open the function → Details → turn "Enforce JWT verification" **off** (it checks your secret instead) |
 | `send-reminders` | `supabase/functions/send-reminders/index.ts` | Same: turn "Enforce JWT verification" **off** |
 | `recommend` | `supabase/functions/recommend/index.ts` | Leave "Enforce JWT verification" **on** |
+| `cleanup-photos` | `supabase/functions/cleanup-photos/index.ts` | Turn "Enforce JWT verification" **off** (it checks your secret instead) |
 
 **Turning on real AI recommendations (when you're ready to pay for them):** in Claude Console
 (platform.claude.com) create an API key, then in Supabase add a secret named `ANTHROPIC_API_KEY` with that key.
@@ -129,6 +130,13 @@ Until then, `recommend` returns clearly labeled demo results. Admins (you) have 
 - Name: `send-reminders`
 - Schedule: `5 * * * *` (5 minutes past every hour)
 - Type: **Supabase Edge Function**, function `send-reminders`, method POST
+- HTTP header: `x-shapeup-secret` = your password
+
+Then create one more job, which deletes shared cut card photos when their time is up
+(7 days after the appointment, or 30 days after sending if there's no booking):
+- Name: `cleanup-photos`
+- Schedule: `15 3 * * *` (once a day, 3:15 am UTC)
+- Type: **Supabase Edge Function**, function `cleanup-photos`, method POST
 - HTTP header: `x-shapeup-secret` = your password
 
 ### 5. Connect the app to Expo's notification service
